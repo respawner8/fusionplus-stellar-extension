@@ -1,0 +1,1 @@
+// This script will claim XLM on the Stellar network 

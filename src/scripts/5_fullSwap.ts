@@ -1,0 +1,1 @@
+// This script will simulate the full atomic swap 

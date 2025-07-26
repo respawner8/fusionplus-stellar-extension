@@ -1,0 +1,1 @@
+// This script will lock XLM on the Stellar network 
