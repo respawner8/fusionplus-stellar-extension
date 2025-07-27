@@ -1,13 +1,17 @@
 import React from 'react';
-import { useMetaMask } from '../hooks/useMetaMask';
-import { useFreighter } from '../hooks/useFreighter';
+import { useWallets } from '../context/WalletContext';
 
 const ConnectWallet: React.FC = () => {
-    // MetaMask
-    const { account: metaMaskAccount, error: metaMaskError, connect: connectMetaMask, disconnect: disconnectMetaMask } = useMetaMask();
-
-    // Freighter
-    const { publicKey: freighterPublicKey, error: freighterError, connect: connectFreighter, disconnect: disconnectFreighter } = useFreighter();
+    const {
+        metaMaskAccount,
+        connectMetaMask,
+        disconnectMetaMask,
+        metaMaskError,
+        freighterPublicKey,
+        connectFreighter,
+        disconnectFreighter,
+        freighterError
+    } = useWallets();
 
     return (
         <div>
