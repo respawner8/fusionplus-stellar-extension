@@ -1,1 +1,71 @@
+/* App Layout */
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+}
 
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+
+/* Header */
+.app-header {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-primary);
+  padding: var(--space-2xl) 0;
+  text-align: center;
+}
+
+.app-subtitle {
+  color: var(--text-secondary);
+  font-size: 1.125rem;
+  margin: 0;
+  opacity: 0.8;
+}
+
+/* Main Content */
+.app-main {
+  flex: 1;
+  padding: var(--space-2xl) 0;
+}
+
+.section {
+  margin-bottom: var(--space-2xl);
+}
+
+.section:last-child {
+  margin-bottom: 0;
+}
+
+/* Footer */
+.app-footer {
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-primary);
+  padding: var(--space-xl) 0;
+  text-align: center;
+}
+
+.app-footer p {
+  color: var(--text-muted);
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 var(--space-md);
+  }
+  
+  .app-header {
+    padding: var(--space-xl) 0;
+  }
+  
+  .app-main {
+    padding: var(--space-xl) 0;
+  }
+}
