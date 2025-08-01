@@ -12,12 +12,14 @@ const Swap: React.FC = () => {
     const [secret, setSecret] = useState<Uint8Array | null>(null);
     const [hash, setHash] = useState<Uint8Array | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [order, setOrder] = useState<any | null>(null); // To store the created order
+    const [order, setOrder] = useState<any | null>(null);
     const [stellarTx, setStellarTx] = useState<string | null>(null);
     const [stellarSubmitResult, setStellarSubmitResult] = useState<any | null>(null);
+    const [isLoading, setIsLoading] = useState<string | null>(null);
 
     const handleGenerateSecret = async () => {
         setError(null);
+        setIsLoading('generating');
         try {
             const { secret, hash } = await generateSecretAndHashAsync();
             setSecret(secret);
@@ -25,6 +27,8 @@ const Swap: React.FC = () => {
         } catch (e) {
             console.error(e);
             setError('Failed to generate secret and hash.');
+        } finally {
+            setIsLoading(null);
         }
     };
 
@@ -38,10 +42,10 @@ const Swap: React.FC = () => {
             return;
         }
         setError(null);
+        setIsLoading('creating-order');
 
         try {
             const chainId = 1; // Ethereum Mainnet
-            // Ethers provider is compatible with the Web3Like interface
             const connector = new Web3ProviderConnector(provider as any);
             const sdk = new FusionSDK({
                 url: 'https://fusion.1inch.io',
@@ -49,15 +53,13 @@ const Swap: React.FC = () => {
                 blockchainProvider: connector,
             });
 
-            // The hash needs to be 0x-prefixed
             const orderParams = {
                 fromTokenAddress: '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', // ETH
                 toTokenAddress: '0x6b175474e89094c44da98b954eedeac495271d0f',   // DAI
                 amount: ethers.parseEther(amount).toString(),
                 walletAddress: metaMaskAccount,
-                preset: PresetEnum.fast, // Or your desired preset
-                // Constructing the calldata for the atomic swap
-                permit: '0x', // No permit needed for ETH
+                preset: PresetEnum.fast,
+                permit: '0x',
                 data: `0x${bytesToHex(hash)}`,
             };
 
@@ -65,11 +67,11 @@ const Swap: React.FC = () => {
             const createdOrder = await sdk.placeOrder(orderParams);
             setOrder(createdOrder);
             console.log('Fusion Order Created:', createdOrder);
-            alert('Fusion order created successfully! Check the console for details.');
-
         } catch (e: any) {
             console.error('Error creating Fusion order:', e);
             setError(`Failed to create Fusion order: ${e.message}`);
+        } finally {
+            setIsLoading(null);
         }
     };
 
@@ -78,42 +80,31 @@ const Swap: React.FC = () => {
             setError('Please connect Freighter and generate a hash first.');
             return;
         }
-        // Assume the ETH holder is the receiver on the Stellar side for this PoC
         if (!metaMaskAccount) {
             setError('Please connect MetaMask (receiver) first.');
             return;
         }
         setError(null);
+        setIsLoading('creating-escrow');
 
         try {
-            const { transactionXDR, escrowKeypair } = await buildCreateEscrowTransaction(
-                freighterPublicKey,
-                metaMaskAccount, // The ETH address is not a valid Stellar key, this is a placeholder.
-                                  // In a real app, the user would provide their Stellar public key.
-                                  // For now, we'll use a dummy key for the receiver.
-                hash
-            );
-
-            // In a real app, the receiver's Stellar public key would be part of the swap negotiation.
-            // Let's use a dummy key for demonstration.
             const dummyReceiverStellarKey = StellarSdk.Keypair.random().publicKey();
             const { transactionXDR: correctedTxXDR } = await buildCreateEscrowTransaction(freighterPublicKey, dummyReceiverStellarKey, hash);
 
-            // Sign with the new escrow account's key
             const transaction = new StellarSdk.Transaction(correctedTxXDR, 'Test SDF Network ; September 2015');
+            const escrowKeypair = StellarSdk.Keypair.random();
             transaction.sign(escrowKeypair);
 
-            // Sign with the locker's (user's) Freighter wallet
             const networkPassphrase = 'Test SDF Network ; September 2015';
             const signedResult = await freighterSignTransaction(transaction.toXDR(), { networkPassphrase });
             const signedXdr = signedResult.signedTxXdr;
             setStellarTx(signedXdr);
-            alert('Stellar escrow transaction signed! Check the console.');
             console.log('Signed Stellar Transaction XDR:', signedXdr);
-
         } catch (e: any) {
             console.error('Error creating Stellar escrow:', e);
             setError(`Failed to create Stellar escrow: ${e.message}`);
+        } finally {
+            setIsLoading(null);
         }
     };
 
@@ -123,77 +114,171 @@ const Swap: React.FC = () => {
             return;
         }
         setError(null);
+        setIsLoading('submitting');
         try {
             const result = await submitTransaction(stellarTx);
             setStellarSubmitResult(result);
-            alert('Stellar transaction submitted! Check the console.');
             console.log('Stellar transaction submit result:', result);
         } catch (e: any) {
             setError('Failed to submit Stellar transaction: ' + e.message);
+        } finally {
+            setIsLoading(null);
         }
     };
 
     return (
-        <div>
-            <h2>Initiate Atomic Swap</h2>
-
-            <div>
-                <button onClick={handleGenerateSecret}>1. Generate Secret & Hash</button>
-                {secret && <p><strong>Secret:</strong> {bytesToHex(secret)}</p>}
-                {hash && <p><strong>Hash (SHA256):</strong> {`0x${bytesToHex(hash)}`}</p>}
+        <div className="fade-in">
+            <div className="card-header">
+                <div className="card-icon">🔄</div>
+                <h2>Atomic Swap Flow</h2>
             </div>
 
-            <hr style={{ margin: '20px 0' }} />
+            <div className="card">
+                <div className="swap-flow" style={{ counterReset: 'step-counter' }}>
+                    {/* Step 1: Generate Secret & Hash */}
+                    <div className="step">
+                        <div className="step-content">
+                            <h3>Generate Secret & Hash</h3>
+                            <p className="text-muted">Create a cryptographic secret and its hash for the atomic swap</p>
+                            
+                            <button 
+                                className="btn btn-primary" 
+                                onClick={handleGenerateSecret}
+                                disabled={isLoading !== null}
+                            >
+                                {isLoading === 'generating' ? 'Generating...' : 'Generate Secret & Hash'}
+                            </button>
 
-            <div>
-                <label>
-                    Amount of ETH to Swap:
-                    <input
-                        type="text"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        placeholder="e.g., 0.1"
-                        style={{ marginLeft: '10px' }}
-                    />
-                </label>
+                            {secret && (
+                                <div className="step-result">
+                                    <div className="input-group">
+                                        <label className="input-label">Secret (Hex)</label>
+                                        <div className="code-block">{bytesToHex(secret)}</div>
+                                    </div>
+                                    <div className="input-group">
+                                        <label className="input-label">Hash (SHA256)</label>
+                                        <div className="code-block">{`0x${bytesToHex(hash!)}`}</div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Step 2: Enter Amount */}
+                    <div className="step">
+                        <div className="step-content">
+                            <h3>Enter Swap Amount</h3>
+                            <p className="text-muted">Specify the amount of ETH you want to swap</p>
+                            
+                            <div className="input-group">
+                                <label className="input-label">Amount of ETH</label>
+                                <input
+                                    type="text"
+                                    className="input"
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                    placeholder="e.g., 0.1"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Step 3: Create Fusion Order */}
+                    <div className="step">
+                        <div className="step-content">
+                            <h3>Create Fusion Order & Lock ETH</h3>
+                            <p className="text-muted">Lock your ETH using the 1inch Fusion+ SDK</p>
+                            
+                            <button 
+                                className="btn btn-primary" 
+                                onClick={handleSwap}
+                                disabled={!provider || !metaMaskAccount || !amount || !hash || isLoading !== null}
+                            >
+                                {isLoading === 'creating-order' ? 'Creating Order...' : 'Create Fusion Order & Lock ETH'}
+                            </button>
+
+                            {order && (
+                                <div className="step-result">
+                                    <div className="status status-success">
+                                        <span>✓</span>
+                                        <span>Order Created Successfully!</span>
+                                    </div>
+                                    <div className="code-block">
+                                        {JSON.stringify(order, null, 2)}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Step 4: Create Stellar Escrow */}
+                    <div className="step">
+                        <div className="step-content">
+                            <h3>Create & Sign Stellar Escrow</h3>
+                            <p className="text-muted">Lock XLM in a hash-locked account on Stellar</p>
+                            
+                            <button 
+                                className="btn btn-primary" 
+                                onClick={handleCreateStellarEscrow}
+                                disabled={!freighterPublicKey || !hash || isLoading !== null}
+                            >
+                                {isLoading === 'creating-escrow' ? 'Creating Escrow...' : 'Create & Sign Stellar Escrow'}
+                            </button>
+
+                            {stellarTx && (
+                                <div className="step-result">
+                                    <div className="status status-success">
+                                        <span>✓</span>
+                                        <span>Stellar Transaction Signed!</span>
+                                    </div>
+                                    <div className="input-group">
+                                        <label className="input-label">Transaction XDR</label>
+                                        <div className="code-block">{stellarTx}</div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Step 5: Submit Stellar Transaction */}
+                    {stellarTx && (
+                        <div className="step">
+                            <div className="step-content">
+                                <h3>Submit Stellar Transaction</h3>
+                                <p className="text-muted">Submit the signed transaction to the Stellar network</p>
+                                
+                                <button 
+                                    className="btn btn-success" 
+                                    onClick={handleSubmitStellarTx}
+                                    disabled={isLoading !== null}
+                                >
+                                    {isLoading === 'submitting' ? 'Submitting...' : 'Submit Stellar Transaction'}
+                                </button>
+
+                                {stellarSubmitResult && (
+                                    <div className="step-result">
+                                        <div className="status status-success">
+                                            <span>✓</span>
+                                            <span>Transaction Submitted Successfully!</span>
+                                        </div>
+                                        <div className="code-block">
+                                            {JSON.stringify(stellarSubmitResult, null, 2)}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Error Display */}
+                {error && (
+                    <div className="status status-error" style={{ marginTop: 'var(--space-lg)' }}>
+                        <span>✗</span>
+                        <span>{error}</span>
+                    </div>
+                )}
             </div>
-
-            <hr style={{ margin: '20px 0' }} />
-
-            <button onClick={handleSwap} disabled={!provider || !metaMaskAccount}>
-                2. Create Fusion Order & Lock ETH
-            </button>
-
-            {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
-
-            {order && (
-                <div style={{ marginTop: '20px', wordBreak: 'break-all' }}>
-                    <h3>Order Created Successfully!</h3>
-                    <pre>{JSON.stringify(order, null, 2)}</pre>
-                </div>
-            )}
-
-            <hr style={{ margin: '20px 0' }} />
-
-            <button onClick={handleCreateStellarEscrow} disabled={!freighterPublicKey || !hash}>
-                3. Create & Sign Stellar Escrow
-            </button>
-
-            {stellarTx && (
-                <div style={{ marginTop: '20px', wordBreak: 'break-all' }}>
-                    <h3>Stellar Transaction Signed!</h3>
-                    <p><strong>XDR:</strong> {stellarTx}</p>
-                    <button onClick={handleSubmitStellarTx} style={{ marginTop: '10px' }}>
-                        4. Submit Stellar Transaction
-                    </button>
-                </div>
-            )}
-            {stellarSubmitResult && (
-                <div style={{ marginTop: '20px', wordBreak: 'break-all' }}>
-                    <h3>Stellar Transaction Submit Result</h3>
-                    <pre>{JSON.stringify(stellarSubmitResult, null, 2)}</pre>
-                </div>
-            )}
         </div>
     );
 };
