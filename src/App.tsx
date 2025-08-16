@@ -2,10 +2,13 @@ import { useState } from 'react'
 import './App.css'
 import ConnectWallet from './components/ConnectWallet';
 import Swap from './components/Swap';
+import DemoGuide from './components/DemoGuide';
+import { WalletProvider } from './context/WalletContext';
 
 function App() {
   return (
-    <div className="app">
+    <WalletProvider>
+      <div className="app">
       {/* Header */}
       <header className="app-header">
         <div className="container">
@@ -19,6 +22,11 @@ function App() {
       {/* Main Content */}
       <main className="app-main">
         <div className="container">
+          {/* Demo Guide Section */}
+          <section className="section">
+            <DemoGuide />
+          </section>
+
           {/* Wallet Connection Section */}
           <section className="section">
             <ConnectWallet />
@@ -37,7 +45,8 @@ function App() {
           <p>Built with React, Vite, and Stellar SDK</p>
         </div>
       </footer>
-    </div>
+      </div>
+    </WalletProvider>
   )
 }
 

@@ -16,6 +16,23 @@ export default defineConfig({
   define: {
     // Provide process global for Node.js modules
     global: 'globalThis',
-    'process.env': {},
   },
+  server: {
+    proxy: {
+      '/api/fusion': {
+        target: 'https://fusion.1inch.io',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/fusion/, ''),
+        configure: (proxy, options) => {
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            // Add proper headers for Fusion+ API
+            proxyReq.setHeader('Origin', 'https://fusion.1inch.io');
+            proxyReq.setHeader('Referer', 'https://fusion.1inch.io/');
+            proxyReq.setHeader('User-Agent', '1inch-fusion-sdk');
+            proxyReq.setHeader('Accept', 'application/json');
+          });
+        }
+      }
+    }
+  }
 })

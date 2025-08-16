@@ -42,11 +42,15 @@ cd fusionplus-stellar-extension
 npm install
 ```
 
-### 3. **Wallet Setup**
-- **MetaMask**: [Install MetaMask](https://metamask.io/) and connect to Ethereum mainnet or testnet
+### 3. **API Key Setup**
+- **Fusion+ API Key**: Get your API key from [1inch Portal](https://portal.1inch.dev/)
+- Create a `.env` file in the root directory and add: `VITE_FUSION_API_KEY=your_api_key_here`
+
+### 4. **Wallet Setup**
+- **MetaMask**: [Install MetaMask](https://metamask.io/) and connect to Ethereum Sepolia testnet
 - **Freighter**: [Install Freighter](https://www.freighter.app/) and create a Stellar testnet wallet
 
-### 4. **Run the dApp**
+### 5. **Run the dApp**
 ```sh
 npm run dev
 ```
@@ -72,8 +76,8 @@ npm run dev
 ---
 
 ## ⚠️ Notes
-- This dApp is for **testnet/demo purposes only**. Do not use with real funds.
-- The swap flow is a simulation and does not perform a true cross-chain atomic swap (no on-chain enforcement between chains).
+- This dApp is for **testnet/demo purposes only**. Uses Sepolia testnet for Ethereum and Stellar testnet.
+- The swap flow demonstrates the Fusion+ API integration with testnet tokens.
 - For a real-world swap, you would need to coordinate secret revelation and claim logic between both chains.
 
 ---
